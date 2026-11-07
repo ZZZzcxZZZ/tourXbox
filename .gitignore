@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+.build-release/
+.swiftpm/
+DerivedData/
+Build/
+dist/
+Validation/
+Research/
+*.xcuserstate
+xcuserdata/

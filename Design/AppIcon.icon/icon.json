@@ -1,0 +1,31 @@
+{
+  "fill": {
+    "solid": "srgb:0.07500,0.07500,0.07500,1.00000"
+  },
+  "groups": [
+    {
+      "name": "tour Xbox",
+      "layers": [
+        {
+          "image-name": "Wordmark.png",
+          "name": "Wordmark",
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

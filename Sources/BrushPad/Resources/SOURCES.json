@@ -1,0 +1,31 @@
+{
+  "retrieved": "2026-11-06",
+  "assets": [
+    {
+      "file": "xbox-front.jpg",
+      "url": "https://assets.xboxservices.com/assets/fa/b8/fab86afd-63d6-45a9-862f-798e5e45cda2.jpg?n=111101_Gallery-0_4_1350x759.jpg",
+      "official_page": "https://www.xbox.com/en-US/accessories/controllers/xbox-wireless-controller",
+      "official_alt": "Front of the XBOX Wireless Controller Carbon Black",
+      "sha256": "4a73e0756f6262ff100075172d7fd50d75214ae8a3f57dc4f3405c267404dc00",
+      "dimensions": [
+        1350,
+        759
+      ],
+      "modified": false,
+      "credit": "Microsoft / Xbox"
+    },
+    {
+      "file": "xbox-top.jpg",
+      "url": "https://assets.xboxservices.com/assets/4a/e8/4ae80482-3d9e-4541-9d28-8a7d746cf2f2.jpg?n=111101_Gallery-0_6_1350x759.jpg",
+      "official_page": "https://www.xbox.com/en-US/accessories/controllers/xbox-wireless-controller",
+      "official_alt": "Top angle of the XBOX Wireless Controller Carbon Black",
+      "sha256": "041dcc242911a36ca2a340e5cf5545fcf666c44b7bdc95e16d753ace21c92571",
+      "dimensions": [
+        1350,
+        759
+      ],
+      "modified": false,
+      "credit": "Microsoft / Xbox"
+    }
+  ]
+}
