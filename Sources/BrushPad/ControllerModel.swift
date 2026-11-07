@@ -85,7 +85,7 @@ import MappingCore
         release("移除功能");profile.bindings.removeAll{$0.id == b.id};selectedBindingID=nil;save();refresh()
     }
     var diagnosticSummary: String {
-        "版本 0.22.0 · PID \(ProcessInfo.processInfo.processIdentifier)\n路径：\(Bundle.main.bundleURL.path)\n签名有效：\(signatureValid)\nAX：\(trusted) · PostEvent：\(postAllowed)\n\(probeResult)\n\n" + logs.joined(separator:"\n")
+        "版本 0.22.1 · PID \(ProcessInfo.processInfo.processIdentifier)\n路径：\(Bundle.main.bundleURL.path)\n签名有效：\(signatureValid)\nAX：\(trusted) · PostEvent：\(postAllowed)\n\(probeResult)\n\n" + logs.joined(separator:"\n")
     }
     init() {
         let support = FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask).first!
@@ -456,7 +456,7 @@ import MappingCore
         probeResult="本地定向投递通过：已收到按下与释放"; record(probeResult); probing=false; writeDiagnostics()
     }
     private func writeDiagnostics() {
-        let values:[String:Any] = ["version":"0.22.0","pid":ProcessInfo.processInfo.processIdentifier,"bundlePath":Bundle.main.bundlePath,"ax":trusted,"postEvent":postAllowed,"signatureValid":signatureValid,"controller":controllerName,"scope":profile.scope.rawValue,"armed":armed,"status":status,"probe":probeResult,
+        let values:[String:Any] = ["version":"0.22.1","pid":ProcessInfo.processInfo.processIdentifier,"bundlePath":Bundle.main.bundlePath,"ax":trusted,"postEvent":postAllowed,"signatureValid":signatureValid,"controller":controllerName,"scope":profile.scope.rawValue,"armed":armed,"status":status,"probe":probeResult,
             "settingsPresented":settingsPresented,"settingsSection":settingsSection.rawValue,"dockIconLoaded":TourXboxDelegate.iconLoaded,"dockIconSource":TourXboxDelegate.iconSource,
             "workspaceWindowNumber":workspaceWindow?.windowNumber ?? -1,"paletteControlFrames":palette.controlFrames,
             "paletteVisible":palette.visible,"paletteMode":palette.activeMode,"palettePointerInside":palette.pointerInside,

@@ -283,6 +283,17 @@ public enum ControllerDiagram {
     public static func annotationControls(_ control:PadControl)->[PadControl] {
         switch control {case .left:return [.left,.right];case .up:return [.up,.down];default:return [control]}
     }
+    public static func leaderRoutes(for annotation:ControllerAnnotation,top:Bool,profile:Profile,rowSpacing:Double=26)->[[DiagramPoint]] {
+        guard !top,[PadControl.left,.up].contains(annotation.control) else{return [annotation.route]}
+        let controls=annotationControls(annotation.control).filter{!profile.configuredBindings(at:$0).isEmpty}
+        let photo=photo(top:false),scale=photo.width/ControllerLayout.width
+        return controls.enumerated().compactMap{index,control in
+            guard let source=ControllerLayout.front.first(where:{$0.control == control}),let end=annotation.route.last else{return nil}
+            let y=annotation.label.y+annotation.label.height/2+(Double(index)-Double(controls.count-1)/2)*rowSpacing
+            let bendX=annotation.route.dropLast().last?.x ?? end.x
+            return [DiagramPoint(photo.x+source.x*scale,photo.y+source.y*scale),DiagramPoint(bendX,y),DiagramPoint(end.x,y)]
+        }
+    }
     public static func allAnnotations(top: Bool) -> [ControllerAnnotation] {
         let photo = photo(top:top)
         let controls = top ? ControllerLayout.intuitiveTop : ControllerLayout.front

@@ -6,7 +6,7 @@
 
 ![调色盘设置](docs/images/palette-settings.png)
 
-从 [Releases](https://github.com/ZZZzcxZZZ/tourXbox/releases) 下载 DMG，将 tourXbox 拖入 Applications，再启动应用。0.22.0 提供 Apple Silicon（arm64）构建，部署目标为 macOS 14；Liquid Glass 界面需要 macOS 26 或更高版本。其他系统版本尚未完成本机验收。
+从 [Releases](https://github.com/ZZZzcxZZZ/tourXbox/releases) 下载 DMG，将 tourXbox 拖入 Applications，再启动应用。0.22.1 提供 Apple Silicon（arm64）构建，部署目标为 macOS 14；Liquid Glass 界面需要 macOS 26 或更高版本。其他系统版本尚未完成本机验收。
 
 当前发布包使用临时签名，未通过 Developer ID 签名与 Apple 公证。构建更新后，系统可能要求重新确认辅助功能授权。已有用户应继续使用同一个安装路径并退出旧副本。
 
@@ -43,9 +43,9 @@ swift test
 - `Tests`：核心与原生事件状态测试。
 - [PORTABILITY.md](PORTABILITY.md)：Windows 迁移边界；尚未提供 Windows 应用。
 
-## 0.22.0 验证范围
+## 0.22.1 验证范围
 
-59 项自动测试通过。新增测试覆盖同键手势互斥、旧配置迁移、1000次保持与同键独立释放。本机验证了设置面板尺寸适配、分类切换、动画及本地 F18 按下 / 释放；修复了事件监听停用通知反馈循环。映射启用、无手柄输入的短时空闲采样 0.21 版本 CPU 为 0.0%、0.1%、0.1%、2.1%，内存约 79 MB；0.22 的最终记录保留在本地验证目录。短时空闲采样不能代表实际绘画性能。
+60 项自动测试通过。新增测试覆盖同键手势互斥、旧配置迁移、1000次保持与同键独立释放。本机验证了设置面板尺寸适配、分类切换、动画及本地 F18 按下 / 释放；修复了事件监听停用通知反馈循环。映射启用、无手柄输入的短时空闲采样 0.21 版本 CPU 为 0.0%、0.1%、0.1%、2.1%，内存约 79 MB；0.22 的最终记录保留在本地验证目录。短时空闲采样不能代表实际绘画性能。
 
 本轮未完成真实 Xbox 持续输入、Wacom 高频绘画、Photoshop 选色与断连、长时内存稳定性和其他硬件 / 系统组合验收。原始本机日志保留在本地，不纳入公开仓库。
 

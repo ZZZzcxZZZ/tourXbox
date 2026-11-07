@@ -91,6 +91,22 @@ final class MultifunctionTests:XCTestCase {
         XCTAssertEqual(p.configuredBindings(at:.right).count,1)
         XCTAssertEqual(p.configuredBindings(at:.down).count,1)
     }
+    func testEachPairedDpadDirectionHasItsOwnPhysicalLeader(){
+        let profile=Profile.drawing,photo=ControllerDiagram.photo(top:false)
+        for control:PadControl in [.left,.up] {
+            let annotation=ControllerDiagram.annotations(top:false,profile:profile).first{$0.control == control}!
+            let routes=ControllerDiagram.leaderRoutes(for:annotation,top:false,profile:profile,rowSpacing:30)
+            let pair=ControllerDiagram.annotationControls(control)
+            XCTAssertEqual(routes.count,2)
+            for (index,input) in pair.enumerated(){
+                let point=ControllerLayout.front.first{$0.control == input}!
+                XCTAssertEqual(routes[index].first!.x,photo.x+point.x*photo.width/1350,accuracy:0.000001)
+                XCTAssertEqual(routes[index].first!.y,photo.y+point.y*photo.width/1350,accuracy:0.000001)
+            }
+            XCTAssertEqual(routes[1].last!.y-routes[0].last!.y,30,accuracy:0.0001)
+            XCTAssertNotEqual(routes[0].first,routes[1].first)
+        }
+    }
     func testRoundtripPreservesMultipleGesturesAndRejectsDuplicateTrigger()throws {
         var p=Profile.drawing
         var extra=MappingBinding(.lt,.tap,Shortcut(11));extra.gesture = .doubleTap;p.bindings.append(extra)

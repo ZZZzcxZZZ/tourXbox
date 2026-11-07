@@ -424,7 +424,7 @@ private struct SettingsSheet:View {
                 HStack{Button("导入…"){model.importProfile()};Button("导出…"){model.exportProfile()};Spacer()}
                 Button("恢复绘画默认映射…",role:.destructive){model.confirmReset=true}
             }
-            Section("关于"){LabeledContent("tourXbox",value:"0.22.0");LabeledContent("默认调色盘呼出",value:"LT · 双击后长按")}
+            Section("关于"){LabeledContent("tourXbox",value:"0.22.1");LabeledContent("默认调色盘呼出",value:"LT · 双击后长按")}
         }.formStyle(.grouped)
     }
 }
@@ -670,22 +670,27 @@ private struct ControllerCanvas: View,Animatable {
                   ZStack(alignment:.topLeading) {
                     ForEach(annotations) { annotation in
                         let chosen = selectionVisible && ControllerDiagram.annotationControls(annotation.control).contains(selected.diagramAnchor)
+                        let groupControls=ControllerDiagram.annotationControls(annotation.control).filter{!profile.configuredBindings(at:$0).isEmpty}
+                        let groupHeight=max(44,annotation.label.height*labelScale)
+                        let rowHeight=groupHeight/Double(max(1,groupControls.count))
                         Path { path in
-                            let points = annotation.route.map { CGPoint(x:labelOrigin.x+$0.x*labelScale,y:labelOrigin.y+$0.y*labelScale) }
-                            path.addLines(points)
+                            for route in ControllerDiagram.leaderRoutes(for:annotation,top:topView,profile:profile,rowSpacing:rowHeight/labelScale) {
+                                let points=route.map{CGPoint(x:labelOrigin.x+$0.x*labelScale,y:labelOrigin.y+$0.y*labelScale)}
+                                if let first=points.first {path.move(to:first);for point in points.dropFirst(){path.addLine(to:point)}}
+                            }
                         }.stroke(chosen ? Color.accentColor : Color.primary.opacity(0.4),style:StrokeStyle(lineWidth:chosen ? 1.5 : 1,lineCap:.round,lineJoin:.round))
                             .allowsHitTesting(false)
                         Group {
                             if [.left,.up].contains(annotation.control) {
-                                VStack(alignment:labelAlignment(annotation),spacing:4) {
-                                    ForEach(ControllerDiagram.annotationControls(annotation.control)){control in
+                                VStack(alignment:labelAlignment(annotation),spacing:0) {
+                                    ForEach(groupControls){control in
                                         if !profile.configuredBindings(at:control).isEmpty {
                                             Button{selected=control}label:{
                                                 HStack(spacing:6){
                                                     ControllerButtonGlyph(control:control,nativeName:glyphs[control])
                                                     Text(functionSummary(control)).font(.system(size:13,weight:.medium)).lineLimit(1)
                                                     Text(shortcutSummary(control)).font(.system(size:10,design:.monospaced)).foregroundStyle(.secondary).lineLimit(1)
-                                                }
+                                                }.frame(height:rowHeight)
                                             }.help(mappingDescription(control)).accessibilityLabel("配置功能 \(control.title)：\(functionSummary(control))")
                                         }
                                     }
