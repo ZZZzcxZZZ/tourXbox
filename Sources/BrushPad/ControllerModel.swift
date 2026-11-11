@@ -12,6 +12,7 @@ import MappingCore
 #endif
 
 @MainActor final class ControllerModel: ObservableObject {
+    let lifecycle=AppLifecyclePreferences()
     @Published var settingsPresented=false
     @Published private(set) var followInput=UserDefaults.standard.object(forKey:"controller.followInput") as? Bool ?? true
     @Published var settingsSection:SettingsSection = .general
@@ -166,7 +167,7 @@ import MappingCore
         }
         release("开始映射"); armed=true; refresh()
     }
-    func showMainWindow(){workspaceWindow?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)}
+    func showMainWindow(){NSApp.setActivationPolicy(.regular);workspaceWindow?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)}
     func showSettings(_ section:SettingsSection){
         release("打开设置")
         settingsSection=section;settingsPresented=true;showMainWindow()
@@ -455,9 +456,10 @@ import MappingCore
         guard probing else { return }
         probeResult="本地定向投递通过：已收到按下与释放"; record(probeResult); probing=false; writeDiagnostics()
     }
-    private func writeDiagnostics() {
-        let values:[String:Any] = ["version":"0.22.1","pid":ProcessInfo.processInfo.processIdentifier,"bundlePath":Bundle.main.bundlePath,"ax":trusted,"postEvent":postAllowed,"signatureValid":signatureValid,"controller":controllerName,"scope":profile.scope.rawValue,"armed":armed,"status":status,"probe":probeResult,
+    func writeDiagnostics() {
+        let values:[String:Any] = ["version":Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "development","pid":ProcessInfo.processInfo.processIdentifier,"bundlePath":Bundle.main.bundlePath,"ax":trusted,"postEvent":postAllowed,"signatureValid":signatureValid,"controller":controllerName,"scope":profile.scope.rawValue,"armed":armed,"status":status,"probe":probeResult,
             "settingsPresented":settingsPresented,"settingsSection":settingsSection.rawValue,"dockIconLoaded":TourXboxDelegate.iconLoaded,"dockIconSource":TourXboxDelegate.iconSource,
+            "workspaceWindowVisible":workspaceWindow?.isVisible ?? false,"activationPolicy":NSApp.activationPolicy().rawValue,"runInBackground":lifecycle.runInBackground,"loginItemStatus":lifecycle.loginStatus.rawValue,
             "workspaceWindowNumber":workspaceWindow?.windowNumber ?? -1,"paletteControlFrames":palette.controlFrames,
             "paletteVisible":palette.visible,"paletteMode":palette.activeMode,"palettePointerInside":palette.pointerInside,
             "paletteRotationEvents":palette.rotationEvents,"paletteRotationRadians":palette.rotationRadians,

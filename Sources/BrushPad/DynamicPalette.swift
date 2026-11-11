@@ -68,12 +68,11 @@ struct PalettePreferences:Codable,Equatable {
             UserDefaults.standard.set(data,forKey:"palette.preferences.v1");self?.changed?()
         }
     }
-    func receive(_ c:PaletteRGB){color=c.clipped;let hsv=color.hsv;if hsv.s>0.0001{hue=hsv.h};let lab=color.lab;labL=lab.l;labA=lab.a;labB=lab.b}
+    func receive(_ c:PaletteRGB){color=c.clipped;let hsv=color.hsv;if hsv.s>0.0001{hue=hsv.h};let lab=color.lab;labL=PaletteRGB.clamp(lab.l/100)*100;labA=lab.a;labB=lab.b}
     func select(_ c:PaletteRGB){receive(c);bridge.submit(color)}
     func selectLab(l:Double,a:Double,b:Double){
-        let c=PaletteRGB.lab(l,a,b)
-        guard !preferences.focused || c.inGamut else{return}
-        color=c.clipped;labL=l;labA=a;labB=b
+        guard let c=PaletteRGB.lumaField(light:l,a:a,b:b,focused:preferences.focused) else{return}
+        color=c;labL=PaletteRGB.clamp(l/100)*100;labA=a;labB=b
         if color.hsv.s>0.0001{hue=color.hsv.h};bridge.submit(color)
     }
     func setHue(_ value:Double){
@@ -98,13 +97,13 @@ struct PalettePreferences:Codable,Equatable {
 /// capture, or recomputation of the controller artwork. Small bounded LRU storage.
 private enum PaletteRaster {
     private static let cache=NSCache<NSString,NSImage>()
-    static func image(_ key:String,width:Int,height:Int,pixel:(Double,Double)->PaletteRGB?)->NSImage {
+    static func image(_ key:String,width:Int,height:Int,background:PaletteRGB = PaletteRGB(0.6,0.6,0.6),pixel:(Double,Double)->PaletteRGB?)->NSImage {
         cache.countLimit=20
         if let value=cache.object(forKey:key as NSString){return value}
         var bytes=[UInt8](repeating:0,count:width*height*4)
         for y in 0..<height {for x in 0..<width {
             let p=pixel(Double(x)/Double(max(1,width-1)),Double(y)/Double(max(1,height-1)))
-            let c=(p ?? PaletteRGB(0.6,0.6,0.6)).clipped,i=(y*width+x)*4
+            let c=(p ?? background).clipped,i=(y*width+x)*4
             bytes[i]=UInt8((c.r*255).rounded());bytes[i+1]=UInt8((c.g*255).rounded());bytes[i+2]=UInt8((c.b*255).rounded());bytes[i+3]=255
         }}
         let data=Data(bytes),provider=CGDataProvider(data:data as CFData)!
@@ -124,16 +123,18 @@ private enum PaletteRaster {
         return image("triangle-\(h)",width:180,height:180){x,y in let p=PaletteRGB.triangle(x,y);return .hsl(h,p.s,p.l)}
     }
     static func luma(_ light:Double,focused:Bool)->NSImage {
-        let l=(light*2).rounded()/2
-        return image("lab-\(l)-\(focused)",width:270,height:270){x,y in
-            let c=PaletteRGB.lab(l,(x-0.5)*256,(0.5-y)*256)
-            return focused && !c.inGamut ? nil:c
+        // Raster and hit testing use the exact same L*, without 0.5-step rounding.
+        let l=PaletteRGB.clamp(light/100)*100
+        let neutral=PaletteRGB.equalLuminanceLab(l,0,0)
+        return image("luma-v2-\(l)-\(focused)",width:270,height:270,background:neutral){x,y in
+            PaletteRGB.lumaField(light:l,a:(x-0.5)*256,b:(0.5-y)*256,focused:focused)
         }
     }
     static func lightBar(a:Double,b:Double,focused:Bool,range:ClosedRange<Double>)->NSImage {
-        let a=a.rounded(),b=b.rounded()
-        return image("light-\(a)-\(b)-\(focused)-\(range.lowerBound)-\(range.upperBound)",width:270,height:18){x,_ in
-            let c=PaletteRGB.lab(range.lowerBound+x*(range.upperBound-range.lowerBound),a,b);return focused && !c.inGamut ? nil:c
+        // The slider must remain a usable continuous luminance control even when
+        // the original chroma does not fit at its darker/lighter endpoints.
+        image("light-v2-\(a)-\(b)-\(range.lowerBound)-\(range.upperBound)",width:270,height:18){x,_ in
+            PaletteRGB.equalLuminanceLab(range.lowerBound+x*(range.upperBound-range.lowerBound),a,b)
         }
     }
 }
@@ -567,7 +568,7 @@ struct PalettePreferencesView:View {
             Section {
                 LabeledContent("状态",value:bridge.status)
                 Button("连接并读取前景色"){bridge.enabled=true;bridge.read(allowWhileConfiguring:true)}
-            } header:{Text("Photoshop")} footer:{Text("当前支持 RGB 文档。采样结束后更新颜色，不持续轮询；同明度使用 CIELAB 近似算法，尚未复现官方私有 Luma 算法。")}
+            } header:{Text("Photoshop")} footer:{Text("当前支持 RGB 文档。采样结束后更新颜色，不持续轮询；同明度以线性 sRGB 亮度为约束，超色域时压缩彩度，避免截断导致明暗漂移；非官方私有算法。")}
         }.formStyle(.grouped).onChange(of:model.preferences){model.save()}
     }
     private func controls(_ values:[PadControl])->some View {

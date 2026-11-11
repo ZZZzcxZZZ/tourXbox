@@ -1,4 +1,6 @@
 import SwiftUI
+import ServiceManagement
+import Carbon
 #if DEBUG
 import Combine
 #endif
@@ -417,6 +419,7 @@ private struct SettingsSheet:View {
     }
     private var general:some View {
         Form{
+            AppBehaviorSettings(preferences:model.lifecycle)
             Section("控制器界面"){
                 Toggle("按手柄定位到对应按键",isOn:Binding(get:{model.followInput},set:{model.setFollowInput($0)}))
             }
@@ -424,7 +427,7 @@ private struct SettingsSheet:View {
                 HStack{Button("导入…"){model.importProfile()};Button("导出…"){model.exportProfile()};Spacer()}
                 Button("恢复绘画默认映射…",role:.destructive){model.confirmReset=true}
             }
-            Section("关于"){LabeledContent("tourXbox",value:"0.22.1");LabeledContent("默认调色盘呼出",value:"LT · 双击后长按")}
+            Section("关于"){LabeledContent("tourXbox",value:Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "开发版");LabeledContent("默认调色盘呼出",value:"LT · 双击后长按")}
         }.formStyle(.grouped)
     }
 }
@@ -971,10 +974,31 @@ extension InputGesture {
     func configureStatusMenu(model:ControllerModel){
         controller=model
         guard statusItem == nil else{return}
+        NotificationCenter.default.addObserver(self,selector:#selector(mainWindowClosed(_:)),name:NSWindow.willCloseNotification,object:nil)
+        if loginLaunch && model.lifecycle.runInBackground {
+            DispatchQueue.main.async {model.workspaceWindow?.orderOut(nil);NSApp.setActivationPolicy(.accessory)}
+        }
         let item=NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength)
         item.button?.image=NSImage(systemSymbolName:"gamecontroller",accessibilityDescription:"tourXbox")
         let menu=NSMenu();menu.delegate=self;item.menu=menu;statusItem=item
     }
+    private var loginLaunch:Bool {
+        NSAppleEventManager.shared().currentAppleEvent?.paramDescriptor(forKeyword:keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    }
+    @objc private func mainWindowClosed(_ notification:Notification){
+        guard let controller,let window=notification.object as? NSWindow,window === controller.workspaceWindow else{return}
+        if controller.lifecycle.runInBackground {
+            NSApp.setActivationPolicy(.accessory)
+            DispatchQueue.main.async {controller.writeDiagnostics()}
+        } else {
+            controller.stop("关闭主窗口")
+            DispatchQueue.main.async {NSApp.terminate(nil)}
+        }
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool {
+        !(controller?.lifecycle.runInBackground ?? true)
+    }
+    func applicationWillBecomeActive(_ notification:Notification){controller?.lifecycle.refresh()}
     func menuWillOpen(_ menu:NSMenu){
         guard let controller else{return}
         menu.removeAllItems()
@@ -999,7 +1023,7 @@ extension InputGesture {
         }
     }
     func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {
-        sender.windows.first{!($0 is NSPanel) && $0.canBecomeMain}?.makeKeyAndOrderFront(nil)
+        controller?.showMainWindow()
         return true
     }
 }
@@ -1018,5 +1042,51 @@ struct FloatingActionStyle:ViewModifier {
     @ViewBuilder func body(content:Content)->some View {
         if #available(macOS 26.0,*) {content.buttonStyle(.glass)}
         else {content.buttonStyle(.bordered)}
+    }
+}
+
+@MainActor protocol LoginItemClient {
+    var status:SMAppService.Status {get}
+    func register()throws
+    func unregister()throws
+}
+@MainActor struct SystemLoginItemClient:LoginItemClient {
+    var status:SMAppService.Status {SMAppService.mainApp.status}
+    func register()throws {try SMAppService.mainApp.register()}
+    func unregister()throws {try SMAppService.mainApp.unregister()}
+}
+@MainActor final class AppLifecyclePreferences:ObservableObject {
+    @Published private(set) var loginStatus:SMAppService.Status = .notRegistered
+    @Published private(set) var loginError:String?
+    @Published var runInBackground:Bool {didSet{defaults.set(runInBackground,forKey:"app.runInBackground")}}
+    private let defaults:UserDefaults
+    private let login:any LoginItemClient
+    init(defaults:UserDefaults = .standard,login:(any LoginItemClient)?=nil){
+        self.defaults=defaults;self.login=login ?? SystemLoginItemClient()
+        // Preserve the existing close-to-background behaviour for current users.
+        runInBackground=defaults.object(forKey:"app.runInBackground") as? Bool ?? true
+        refresh()
+    }
+    var launchAtLogin:Bool {loginStatus == .enabled || loginStatus == .requiresApproval}
+    func refresh(){loginStatus=login.status}
+    func setLaunchAtLogin(_ enabled:Bool){
+        loginError=nil;refresh()
+        guard enabled != launchAtLogin else{return}
+        do {if enabled {try login.register()}else{try login.unregister()}}
+        catch {loginError="无法更新登录项："+error.localizedDescription}
+        refresh()
+    }
+}
+private struct AppBehaviorSettings:View {
+    @ObservedObject var preferences:AppLifecyclePreferences
+    var body:some View {
+        Section {
+            Toggle("登录时自动启动",isOn:Binding(get:{preferences.launchAtLogin},set:{preferences.setLaunchAtLogin($0)}))
+            if preferences.loginStatus == .requiresApproval {
+                LabeledContent("登录项等待系统允许"){Button("打开登录项设置…"){SMAppService.openSystemSettingsLoginItems()}}
+            }
+            if let error=preferences.loginError {Text(error).foregroundStyle(.red).font(.callout)}
+            Toggle("关闭窗口后继续后台运行",isOn:$preferences.runInBackground)
+        } header:{Text("启动与后台")} footer:{Text("后台运行时可从菜单栏重新打开窗口或退出。开启后台运行后，登录自启将隐藏主窗口。")}
     }
 }

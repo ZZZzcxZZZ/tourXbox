@@ -65,3 +65,45 @@ public struct PaletteRGB: Equatable, Codable, Sendable {
         return (c,1-l)
     }
 }
+
+/// Equal-luminance sRGB gamut projection. L* is monotonic in relative luminance;
+/// moving toward the neutral of the SAME Y retains that luminance, unlike channel
+/// clipping. This is our model, not an implementation of TourBox's private formula.
+public extension PaletteRGB {
+    static func decodeSRGB(_ v:Double)->Double {v<=0.04045 ? v/12.92:pow((v+0.055)/1.055,2.4)}
+    static func encodeSRGB(_ v:Double)->Double {v<=0.0031308 ? 12.92*v:1.055*pow(v,1/2.4)-0.055}
+    var relativeLuminance:Double {
+        (0.2126729*Self.decodeSRGB(r)+0.7151522*Self.decodeSRGB(g)+0.0721750*Self.decodeSRGB(b))/1.0000001
+    }
+    static func luminance(forLabLightness light:Double)->Double {
+        let l=clamp(light/100)*100,f=(l+16)/116
+        return l>8 ? f*f*f:l/(24389.0/27)
+    }
+    static func equalLuminanceLab(_ light:Double,_ a:Double,_ b:Double)->Self {
+        let y=luminance(forLabLightness:light)
+        guard a.isFinite,b.isFinite else{let g=encodeSRGB(y);return Self(g,g,g)}
+        return projectToSRGB(lab(clamp(light/100)*100,a,b),targetY:y)
+    }
+    /// Map a converted wide-gamut color into the palette without channel clipping.
+    var luminanceMappedToSRGB:Self {Self.projectToSRGB(self,targetY:Self.clamp(relativeLuminance))}
+    private static func projectToSRGB(_ raw:Self,targetY y:Double)->Self {
+        guard y>0 else{return Self(0,0,0)}
+        guard y<1 else{return Self(1,1,1)}
+        let rr=decodeSRGB(raw.r),gg=decodeSRGB(raw.g),bb=decodeSRGB(raw.b)
+        let actual=(0.2126729*rr+0.7151522*gg+0.0721750*bb)/1.0000001
+        let dr=rr-actual,dg=gg-actual,db=bb-actual
+        // The weighted sum of deltas is zero. Scale them together until all
+        // channels fit the RGB cube; the neutral intercept remains exactly Y.
+        var scale=1.0
+        for delta in [dr,dg,db] {
+            if delta>0 {scale=min(scale,(1-y)/delta)}
+            else if delta<0 {scale=min(scale,-y/delta)}
+        }
+        return Self(encodeSRGB(clamp(y+scale*dr)),encodeSRGB(clamp(y+scale*dg)),encodeSRGB(clamp(y+scale*db)))
+    }
+    static func lumaField(light:Double,a:Double,b:Double,focused:Bool)->Self? {
+        let l=clamp(light/100)*100
+        if focused && !lab(l,a,b).inGamut {return nil}
+        return equalLuminanceLab(l,a,b)
+    }
+}

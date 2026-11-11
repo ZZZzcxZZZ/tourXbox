@@ -102,6 +102,10 @@ Apple Silicon · v0.22.1 公开预览 · Liquid Glass 需要 macOS 26+
 
 </details>
 
+## 开发版进展
+
+0.23 源码已加入登录自启、关闭窗口后后台运行，以及保持线性亮度的同明度色域映射和 Photoshop 文档 ICC 转换。当前下载入口仍为 0.22.1；算法与验证边界见 [色彩模型说明](docs/COLOR_MODEL.md)。
+
 ## 开发与反馈
 
 发现问题时，可在 [Issues](https://github.com/ZZZzcxZZZ/tourXbox/issues) 描述系统版本、手柄型号、目标应用和复现步骤。
